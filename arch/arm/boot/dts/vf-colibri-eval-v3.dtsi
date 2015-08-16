@@ -53,7 +53,7 @@
 		};
 	};
 
-	gpio-keys {
+/*	gpio-keys {
 		compatible = "gpio-keys";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_gpiokeys>;
@@ -66,10 +66,17 @@
 			gpio-key,wakeup;
 		};
 	};
+*/
+	gpio-poweroff {
+	    	compatible = "gpio-poweroff";
+	    	pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpiopower>;
+	    	gpios = <&gpio2 25 GPIO_ACTIVE_LOW>;
+	};
 };
 
 &bl {
-	brightness-levels = <0 4 8 16 32 64 128 255>;
+	brightness-levels = <0 8 16 32 64 128 152 181 215 255>;
 	default-brightness-level = <6>;
 	status  = "okay";
 };
@@ -83,8 +90,23 @@
 	display: display@0 {
 		bits-per-pixel = <16>;
 
-		display-timings {
-			native-mode = <&timing_vga>;
+                display-timings {
+                        native-mode = <&timing_skytraxx>;
+                        /* Skytraxx timing */
+                        timing_skytraxx: 480x272 {
+                                clock-frequency = <9000000>;
+                                hactive = <480>;
+                                vactive = <272>;
+                                hback-porch = <2>;
+                                hfront-porch = <2>;
+                                vback-porch = <2>;
+                                vfront-porch = <2>;
+                                hsync-len = <41>;               //??
+                                vsync-len = <10>;               //??
+                                hsync-active = <0>;
+                                vsync-active = <0>;
+                                pixelclk-active = <1>;
+                        };
 			/* Standard VGA timing */
 			timing_vga: 640x480 {
 				clock-frequency = <25175000>;
@@ -240,6 +262,26 @@
 	pinctrl-0 = <&pinctrl_pwm1_d>;
 };
 
+&dac0 {
+	status = "okay";
+};
+
+&dac1 {
+	status = "okay";
+};
+
+&pdb {
+	status = "okay";
+};
+
+&edma1 {
+	status = "okay";
+};
+
+&sound {
+	status = "okay";
+};
+
 &tcon0 {
 	status = "okay";
 };
@@ -268,9 +310,15 @@
 			>;
 		};
 
-		pinctrl_gpiokeys: gpiokeys {
+//		pinctrl_gpiokeys: gpiokeys {
+//			fsl,pins = <
+//				VF610_PAD_PTB19__GPIO_41	0x219d
+//			>;
+//		};
+
+		pinctrl_gpiopower: gpiopower {
 			fsl,pins = <
-				VF610_PAD_PTB19__GPIO_41	0x219d
+				VF610_PAD_PTD10__GPIO_89	0x10c2
 			>;
 		};
 

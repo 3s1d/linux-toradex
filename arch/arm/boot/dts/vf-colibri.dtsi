@@ -48,6 +48,18 @@
 	vref-supply = <&sys_3v3_avdd_reg>;
 };
 
+&dac0 {
+	status = "okay";
+};
+
+&dac1 {
+	status = "okay";
+};
+
+&pdb {
+	status = "okay";
+};
+
 &can0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan0>;
@@ -116,16 +128,20 @@
 &uart0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart0>;
+//	dma-names = "", "";						//bugfix up to 4.1
+
 };
 
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1>;
+//	dma-names = "", "";						//bugfix up to 4.1
 };
 
 &uart2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart2>;
+//	dma-names = "", "";						//bugfix up to 4.1
 };
 
 &usbdev0 {
@@ -156,6 +172,13 @@
 
 &iomuxc {
 	vf610-colibri {
+
+		pinctrl_sndgpio: sndgpio {
+			fsl,pins = <
+				VF610_PAD_PTB19__GPIO_41	0x018D
+			>;
+		};
+
 		pinctrl_additionalgpio: additionalgpios {
 			fsl,pins = <
 				VF610_PAD_PTA12__GPIO_5		0x22ed

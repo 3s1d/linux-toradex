@@ -46,6 +46,16 @@
 	};
 };
 
+&dac0{ };
+
+&dac1{ };
+
+&pdb{ };
+
+&sound {
+	interrupts = <GIC_SPI 97 IRQ_TYPE_LEVEL_HIGH>;
+};
+
 &mscm_ir {
 	interrupt-parent = <&intc>;
 };
