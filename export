@@ -1,0 +1,4 @@
+export ARCH=arm
+export CROSS_COMPILE=/opt/skytraxx3/oe-core/build/out-eglibc/sysroots/x86_64-linux/usr/bin/armv7at2hf-vfp-neon-angstrom-linux-gnueabi/arm-angstrom-linux-gnueabi-
+export PATH=/opt/skytraxx3/oe-core/build/out-eglibc/sysroots/x86_64-linux/usr/bin:$PATH
+

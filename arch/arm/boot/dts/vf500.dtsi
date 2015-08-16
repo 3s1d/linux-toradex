@@ -53,7 +53,7 @@
 &pdb{ };
 
 &sound {
-	interrupts = <GIC_SPI 97 IRQ_TYPE_LEVEL_HIGH>;
+	//interrupts = <GIC_SPI 97 IRQ_TYPE_LEVEL_HIGH>;
 };
 
 &mscm_ir {

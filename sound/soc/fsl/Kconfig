@@ -227,6 +227,12 @@ config SND_SOC_FSL_SAI_WM9712
 	  Say Y or M here if you want to add support for SoC audio on Freescale
 	  SoC using SAI and the WM9712 (or compatible) codec.
 
+config SND_SOC_FSL_VF500
+	tristate "SoC Audio support for Freescale VF500 SoC's using the internal DAC"
+	help
+	  Say Y or M here if you want to add support for SoC audio on Freescale VF500
+	  SoC using internal DAC.
+
 config SND_SOC_EUKREA_TLV320
 	tristate "Eukrea TLV320"
 	depends on ARCH_MXC && I2C
