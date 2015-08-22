@@ -94,7 +94,7 @@ static struct snd_pcm_hardware snd_mychip_playback_hw = {
         .channels_min =     1,
         .channels_max =     1,
         .buffer_bytes_max = 32768,
-        .period_bytes_min = 4096,
+        .period_bytes_min = 2048,
         .period_bytes_max = 32768,
         .periods_min =      1,
         .periods_max =      1024,
@@ -137,7 +137,7 @@ static irqreturn_t snd_pcm_irq(int irq, void *dev_id)
 //		printk("I note\n");
 		snd_pcm_period_elapsed(sound_reg->substream);
 		sound_reg->ack_periode_pos += sound_reg->substream->runtime->period_size;
-		sound_reg->ack_periode_pos %= (sound_reg->substream->buffer_bytes_max>>2); //hack: factor 2 due to u16, factor 2 due to stereo
+		sound_reg->ack_periode_pos %= (sound_reg->substream->runtime->buffer_size);
 //		printk("I acked: %i\n", sound_reg->ack_periode_pos);
 	}
 	else
@@ -248,7 +248,7 @@ static int snd_pcm_prepare(struct snd_pcm_substream *substream)
 		return -1000;
 	}
 
-	ret = substream->dma_buffer.bytes/2;		//todo 2 channel???
+	ret = substream->runtime->buffer_size<<1;
 	for(smod=0; ret>1; smod++)
 	{
 		ret >>= 1;
