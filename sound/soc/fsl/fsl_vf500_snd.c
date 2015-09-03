@@ -2,7 +2,7 @@
  * vf500_sound.c
  *
  *  Created on: May 28, 2015
- *      Author: sid
+ *      Author: sid aka. Juergen Eckert
  */
 
 #include <linux/module.h>
@@ -29,8 +29,6 @@
 #include <linux/interrupt.h>
 
 #include "fsl_vf500_snd.h"
-
-//todo: test different frequencies, mixer, stereo, test different divider (64)
 
 
 static char *clk_name[] = {"pdb_clk", "dac0_clk", "dac1_clk", "dmamux2_clk", "dmamux3_clk"};
@@ -60,7 +58,7 @@ struct sound_reg
 	struct regmap *regmap[6];
 	struct snd_card *card;
 	struct platform_device *pdev;
-	struct snd_pcm_substream *substream;			//todo save runtime instead???
+	struct snd_pcm_substream *substream;
 	int ack_periode_pos;
 	int vol, vol_adjust;
 	int en_pin;
@@ -311,9 +309,7 @@ static int snd_pcm_prepare(struct snd_pcm_substream *substream)
 	//printk("rateinv %i\n", rateinv);
 
 
-        /* set up the hardware with the current configuration
-         * for example...
-         */
+        /* set up the hardware with the current configuration */
 
         //printk("rate %i\n", runtime->rate);
         //printk("channels %i\n", runtime->channels);
@@ -333,43 +329,42 @@ static int snd_pcm_prepare(struct snd_pcm_substream *substream)
 
 	/*Set Source Address*/
 	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD0_SADDR, runtime->dma_addr);
-/**/	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD1_SADDR, runtime->dma_addr + \
+	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD1_SADDR, runtime->dma_addr + \
 		(sound_reg->diffSigOffsetWord<<1));
 
 	/* Destination address */
 	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD0_DADDR, 0x400CC000u);	//DAC0_DAT0
-/**/	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD1_DADDR, 0x400CD000u);	//DAC1_DAT0
+	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD1_DADDR, 0x400CD000u);	//DAC1_DAT0
 
 	/* Source and Destination Modulo off, source and destination size 1 = 32 bits - 4 bytes */
 	/* Source offset disabled */
 	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD0_ATTR_SOFF, \
-		((DMA_ATTR_SMOD(smod) | DMA_ATTR_SSIZE(1) | DMA_ATTR_DSIZE(1))<<16) | 2); //9 1 1 2 //org 2 2 4
-/**/	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD1_ATTR_SOFF, \
-		((DMA_ATTR_SMOD(smod) | DMA_ATTR_SSIZE(1) | DMA_ATTR_DSIZE(1))<<16) | 2); //9 1 1 2 //org 2 2 4
+		((DMA_ATTR_SMOD(smod) | DMA_ATTR_SSIZE(1) | DMA_ATTR_DSIZE(1))<<16) | 2);
+	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD1_ATTR_SOFF, \
+		((DMA_ATTR_SMOD(smod) | DMA_ATTR_SSIZE(1) | DMA_ATTR_DSIZE(1))<<16) | 2);
 
 	/* Transfer N bytes per transaction */
-	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD0_NBYTES_MLNO, 32);	//32	//change to org 8
-/**/	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD1_NBYTES_MLNO, 32);	//32	//change to org 8
+	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD0_NBYTES_MLNO, 32);
+	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD1_NBYTES_MLNO, 32);	
 
 	/* SLAST No adjust needed */
-	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD0_SLAST, 0);//0
-/**/	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD1_SLAST, 0);//0
+	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD0_SLAST, 0);
+	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD1_SLAST, 0);
 
 	/* No link channel to channel, 1 transaction */
 	/* Destination offset disabled */
 	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD0_CITER_ELINKYES__ELINKNO_DOFF, \
-		(DMA_CITER_ELINKNO_CITER(1)<<16) | 2);		//org 4
-/**/	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD1_CITER_ELINKYES__ELINKNO_DOFF, \
-		(DMA_CITER_ELINKNO_CITER(1)<<16) | 2);		//org 4
+		(DMA_CITER_ELINKNO_CITER(1)<<16) | 2);
+	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD1_CITER_ELINKYES__ELINKNO_DOFF, \
+		(DMA_CITER_ELINKNO_CITER(1)<<16) | 2);
 
-	/* adjustment to	destination address */
-	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD0_DLASTSGA, -32);		//org -8???
-/**/	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD1_DLASTSGA, -32);		//org -8???
+	/* adjustment to destination address */
+	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD0_DLASTSGA, -32);
+	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD1_DLASTSGA, -32);
 
-	//??
 	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD0_BITER_ELINKYES__ELINKNO_CSR,
 		(DMA_BITER_ELINKNO_BITER(1)<<16) | 0);
-/**/	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD1_BITER_ELINKYES__ELINKNO_CSR,
+	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA1_TCD1_BITER_ELINKYES__ELINKNO_CSR,
 		(DMA_BITER_ELINKNO_BITER(1)<<16) | 0);
 
 	if (ret)
@@ -385,7 +380,7 @@ static int snd_pcm_prepare(struct snd_pcm_substream *substream)
 
 	/*Set DAC Interval*/
 	ret += regmap_write(sound_reg->regmap[REGMAP_PDB], PDB_DACINT0, rateinv); //PDB_DAC_INTERVAL-1
-/**/	ret += regmap_write(sound_reg->regmap[REGMAP_PDB], PDB_DACINT1, rateinv); //PDB_DAC_INTERVAL-1
+	ret += regmap_write(sound_reg->regmap[REGMAP_PDB], PDB_DACINT1, rateinv); //PDB_DAC_INTERVAL-1
 
 	/*Configure PDB interrupt delay register*/
 	/* note: need to be done prior to PDB_SC_LDOK_MASK*/
@@ -402,7 +397,7 @@ static int snd_pcm_prepare(struct snd_pcm_substream *substream)
 
 	/*Enable DAC Interval*/
 	ret += regmap_write(sound_reg->regmap[REGMAP_PDB], PDB_DACINTC0, PDB_DACINTC_TOE_MASK);
-/**/	ret += regmap_write(sound_reg->regmap[REGMAP_PDB], PDB_DACINTC1, PDB_DACINTC_TOE_MASK);
+	ret += regmap_write(sound_reg->regmap[REGMAP_PDB], PDB_DACINTC1, PDB_DACINTC_TOE_MASK);
 
 	if (ret)
 	{
@@ -678,11 +673,10 @@ static int sound_driver_probe(struct platform_device *pdev)
         //printk("addr %x\n", pcm->streams[0].substream->dma_buffer.addr);
 
         //printk("addr %ul\n", pcm->streams[1].substream->dma_buffer.addr);
+	
 	/*
 	 *
-	 *
 	 * Hardware
-	 *
 	 *
 	 */
 
@@ -703,7 +697,7 @@ static int sound_driver_probe(struct platform_device *pdev)
 	//Clocks
 	for(i=0; i<sizeof (clk_name) / sizeof (*clk_name); i++)
 	{
-		sound_reg->clk[i] = devm_clk_get(&pdev->dev, clk_name[i]);	//org NULL
+		sound_reg->clk[i] = devm_clk_get(&pdev->dev, clk_name[i]);
 		if (IS_ERR(sound_reg->clk[i]))
 		{
 			dev_err(&pdev->dev, "Get clock failed.\n");
@@ -769,7 +763,7 @@ static int sound_driver_remove(struct platform_device *pdev)
 	if (IS_ERR(sound_reg))
 		return -ENOMEM;
 
-	//das soll funktionieren??
+	//this works??
 	snd_card_free(sound_reg->card);
 
 	for (i = 0; i < sizeof (clk_name) / sizeof (*clk_name); i++)
