@@ -692,10 +692,16 @@ static int ci_id_notifier(struct notifier_block *nb, unsigned long event,
 {
 	struct ci_hdrc	*ci = container_of(nb, struct ci_hdrc, id_nb);
 
+	pm_runtime_get_sync(ci->dev);
+
 	ci_role_stop(ci);
+
+	hw_wait_phy_stable();
 
 	if (ci_role_start(ci, event?CI_ROLE_HOST:CI_ROLE_GADGET))
 		dev_err(ci->dev, "can't start %s role\n", ci_role(ci)->name);
+
+	pm_runtime_put_sync(ci->dev);
 
 	return NOTIFY_DONE;
 }
@@ -705,10 +711,14 @@ static int ci_vbus_notifier(struct notifier_block *nb, unsigned long event,
 {
 	struct ci_hdrc	*ci = container_of(nb, struct ci_hdrc, vbus_nb);
 
+	pm_runtime_get_sync(ci->dev);
+
 	if (event)
 		usb_gadget_vbus_connect(&ci->gadget);
 	else
 		usb_gadget_vbus_disconnect(&ci->gadget);
+
+	pm_runtime_put_sync(ci->dev);
 
 	return NOTIFY_DONE;
 }
