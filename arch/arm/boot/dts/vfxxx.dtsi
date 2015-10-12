@@ -559,7 +559,7 @@
 
 			edma1: dma-controller@40098000 {
 				#dma-cells = <2>;
-				compatible = "fsl,vf610-edma1";
+				compatible = "fsl,vf610-edma";			//org: fsl,vf610-edma1
 				reg = <0x40098000 0x2000>,
 					<0x400a1000 0x1000>,
 					<0x400a2000 0x1000>;
@@ -567,7 +567,7 @@
 				interrupts = <10 IRQ_TYPE_LEVEL_HIGH>,
 						<11 IRQ_TYPE_LEVEL_HIGH>;
 				interrupt-names = "edma-tx", "edma-err";
-				clock-names = "dmamux2", "dmamux3";
+				clock-names = "dmamux", "dmamux";			//org: "dmamux2", "dmamux3"
 				clocks = <&clks VF610_CLK_DMAMUX2>,
 					<&clks VF610_CLK_DMAMUX3>;
 				status = "disabled";
