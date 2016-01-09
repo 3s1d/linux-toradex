@@ -282,22 +282,6 @@
 	status = "okay";
 };
 
-&dac0 {
-	status = "okay";
-};
-
-&dac1 {
-	status = "okay";
-};
-
-&pdb {
-	status = "okay";
-};
-
-&edma1 {
-	status = "okay";
-};
-
 &sound {
 	status = "okay";
 };

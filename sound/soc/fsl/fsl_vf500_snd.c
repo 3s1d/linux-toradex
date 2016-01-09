@@ -96,6 +96,7 @@ static struct snd_pcm_hardware snd_mychip_playback_hw = {
         .period_bytes_max = 32768,
         .periods_min =      1,
         .periods_max =      1024,
+        .fifo_size = 	    0,
 };
 
 static irqreturn_t snd_pcm_irq(int irq, void *dev_id)
@@ -133,9 +134,9 @@ static irqreturn_t snd_pcm_irq(int irq, void *dev_id)
 	if(position >= (sound_reg->ack_periode_pos+sound_reg->substream->runtime->period_size) || position < sound_reg->ack_periode_pos)
 	{
 //		printk("I note\n");
-		snd_pcm_period_elapsed(sound_reg->substream);
 		sound_reg->ack_periode_pos += sound_reg->substream->runtime->period_size;
 		sound_reg->ack_periode_pos %= (sound_reg->substream->runtime->buffer_size);
+		snd_pcm_period_elapsed(sound_reg->substream);
 //		printk("I acked: %i\n", sound_reg->ack_periode_pos);
 	}
 	else
@@ -161,7 +162,6 @@ static int snd_playback_open(struct snd_pcm_substream *substream)
         /*store substream pointer*/   //todo: temp
         sound_reg->substream = substream;
 
-        runtime->hw = snd_mychip_playback_hw;
         /* more hardware-initialization will be done here */
 
         irq = platform_get_irq(sound_reg->pdev, 0);
@@ -183,6 +183,8 @@ static int snd_playback_open(struct snd_pcm_substream *substream)
 		printk("can't register ISR for IRQ %u (ret=%i)\n", 145, ret);
 		return ret;
 	}
+
+        runtime->hw = snd_mychip_playback_hw;
 
 	return 0;
 }
@@ -268,40 +270,42 @@ static int snd_pcm_prepare(struct snd_pcm_substream *substream)
 	{
 	case 8000:
 		pdb_prescaler = 6;
-		rateinv = 129-1;
+		//rateinv = 129-1;
 		break;
 	case 11025:
 		pdb_prescaler = 5;
-		rateinv = 187-1;
+		//rateinv = 187-1;
 		break;
 	case 16000:
 		pdb_prescaler = 5;
-		rateinv = 129-1;
+		//rateinv = 129-1;
 		break;
 	case 22050:
 		pdb_prescaler = 6;
-		rateinv = 47-1;
+		//rateinv = 47-1;
 		break;
 	case 32000:
 		pdb_prescaler = 6;
-		rateinv = 32-1;
+		//rateinv = 32-1;
 		break;
 	case 44100:
 		pdb_prescaler = 5;
-		rateinv = 47-1;
+		//rateinv = 47-1;
 		break;
 	case 48000:
 		pdb_prescaler = 5;
-		rateinv = 43-1;		//11 for further computation
+		//rateinv = 43-1;		//11 for further computation
 		break;
 	default:
 		printk("unsupported rate: %i\n", runtime->rate);
 		return -1003;
 	}
 
+	rateinv = (clk_get_rate(sound_reg->clk[REGMAP_PDB]) / (1 << pdb_prescaler)) / runtime->rate;
+
 	/* compute interrupt time and fit it into 16bit counter */
 	idly = runtime->period_size * (rateinv+1);
-	while(idly > 65536)
+	while(idly > USHRT_MAX)
 		idly>>=1;
 	idly--;				//-1 to address 0 counter value?make
 
@@ -474,24 +478,27 @@ static int snd_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 static snd_pcm_uframes_t snd_pcm_pointer(struct snd_pcm_substream *substream)
 {
 	struct sound_reg *sound_reg = snd_pcm_substream_chip(substream);
-        unsigned int current_ptr;
-        int ret;
-        unsigned int phys_addr;
+//        unsigned int current_ptr;
+//        int ret;
+//        unsigned int phys_addr;
 
         /* get the current hardware pointer */
-	ret = regmap_read(sound_reg->regmap[REGMAP_DMA], DMA1_TCD0_SADDR, &phys_addr);
-	ret += regmap_read(sound_reg->regmap[REGMAP_DMA], DMA1_TCD1_SADDR, &phys_addr + (sound_reg->diffSigOffsetWord<<1));
-	if(ret)
-	{
-		printk("unable to read DMA1_TCD0_SADDR: %i\n", ret);
-		return -1;
-	}
+//	ret = regmap_read(sound_reg->regmap[REGMAP_DMA], DMA1_TCD0_SADDR, &phys_addr);
+//	ret += regmap_read(sound_reg->regmap[REGMAP_DMA], DMA1_TCD1_SADDR, &phys_addr + (sound_reg->diffSigOffsetWord<<1));
+//	if(ret)
+//	{
+//		printk("unable to read DMA1_TCD0_SADDR: %i\n", ret);
+//		return -1;
+//	}
 
-        current_ptr = phys_addr - sound_reg->substream->runtime->dma_addr;
+//        current_ptr = phys_addr - sound_reg->substream->runtime->dma_addr;
         //printk("snd_pcm_pointer %i\n", (int)bytes_to_frames(substream->runtime, current_ptr));
 
 
-	return bytes_to_frames(substream->runtime, current_ptr);
+//	return bytes_to_frames(substream->runtime, current_ptr);
+
+
+	return bytes_to_frames(substream->runtime, sound_reg->ack_periode_pos);
 
 }
 
@@ -597,7 +604,7 @@ static int sound_driver_probe(struct platform_device *pdev)
 {
 	int i, ret;
 	struct sound_reg *sound_reg;
-	const struct of_device_id *match;
+	//const struct of_device_id *match;
 	struct resource *mem_res;
 	void __iomem *base;
 
@@ -608,7 +615,7 @@ static int sound_driver_probe(struct platform_device *pdev)
 	//printk("Sound probe\n");
 
 	//required???
-	match = of_match_node(sound_of_match, pdev->dev.of_node);
+	//match = of_match_node(sound_of_match, pdev->dev.of_node);
 
 	sound_reg = devm_kzalloc(&pdev->dev, sizeof(struct sound_reg), GFP_KERNEL);
 	if (IS_ERR(sound_reg))
@@ -616,64 +623,6 @@ static int sound_driver_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, sound_reg);
 
-
-	/*
-	 *
-	 * ALSA
-	 *
-	 */
-
-	sound_reg->vol = 20; //todo magic number
-	sound_reg->vol_adjust = voltab[sound_reg->vol];
-
-	///&pdev->dev correct?? something does not seem to work properly
-	ret = snd_card_new(&pdev->dev, SNDRV_DEFAULT_IDX1, SNDRV_DEFAULT_STR1, THIS_MODULE, 0, &sound_reg->card);
-	if (ret < 0)
-	{
-		dev_err(&pdev->dev, "new soundcard.\n");
-		snd_card_free(sound_reg->card);
-		return -ENOMEM;
-	}
-	strcpy(sound_reg->card->driver, "vf500_sound");
-        strcpy(sound_reg->card->shortname, "vf500snd");
-        strcpy(sound_reg->card->longname, "VF500 DAC Sound Driver");
-
-        sound_reg->pdev = pdev;
-
-	ret = snd_pcm_new(sound_reg->card, "vf500_pcm", 0, 1, 0, &pcm);
-	if (ret)
-	{
-		dev_err(&pdev->dev, "new soundcard2\n");
-		return -ENOMEM;
-	}
-
-        /* set operators */
-        snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_PLAYBACK, &snd_playback_ops);
-        pcm->private_data = sound_reg;
-        strcpy(pcm->name, "My PCM");
-        pcm->info_flags = SNDRV_PCM_INFO_HALF_DUPLEX;
-
-        /* control */
-        ret = snd_ctl_add(sound_reg->card, snd_ctl_new1(&card_ctl, sound_reg));
-        if (ret < 0){
-        	dev_err(&pdev->dev, " snd_ctl register\n");
-                return ret;
-        }
-
-        ret = snd_card_register(sound_reg->card);
-	if (ret < 0) {
-		dev_err(&pdev->dev, " snd_card_register\n");
-		return ret;
-	}
-
-        /* pre-allocation of buffers */
-        /* NOTE: this may fail */
-        ret = snd_pcm_lib_preallocate_pages_for_all(pcm, SNDRV_DMA_TYPE_DEV, &pdev->dev, 64*1024, 64*1024);
-
-        //printk("addr %x\n", pcm->streams[0].substream->dma_buffer.addr);
-
-        //printk("addr %ul\n", pcm->streams[1].substream->dma_buffer.addr);
-	
 	/*
 	 *
 	 * Hardware
@@ -737,6 +686,63 @@ static int sound_driver_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+	/*
+	 *
+	 * ALSA
+	 *
+	 */
+
+	sound_reg->vol = 20; //todo magic number
+	sound_reg->vol_adjust = voltab[sound_reg->vol];
+
+	///&pdev->dev correct?? something does not seem to work properly
+	ret = snd_card_new(&pdev->dev, SNDRV_DEFAULT_IDX1, SNDRV_DEFAULT_STR1, THIS_MODULE, 0, &sound_reg->card);
+	if (ret < 0)
+	{
+		dev_err(&pdev->dev, "new soundcard.\n");
+		snd_card_free(sound_reg->card);
+		return -ENOMEM;
+	}
+	strcpy(sound_reg->card->driver, "vf500_sound");
+        strcpy(sound_reg->card->shortname, "vf500snd");
+        strcpy(sound_reg->card->longname, "VF500 DAC Sound Driver");
+
+        sound_reg->pdev = pdev;
+
+	ret = snd_pcm_new(sound_reg->card, "vf500_pcm", 0, 1, 0, &pcm);
+	if (ret)
+	{
+		dev_err(&pdev->dev, "new soundcard2\n");
+		return -ENOMEM;
+	}
+
+        /* set operators */
+        snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_PLAYBACK, &snd_playback_ops);
+        pcm->private_data = sound_reg;
+        strcpy(pcm->name, "My PCM");
+        pcm->info_flags = SNDRV_PCM_INFO_HALF_DUPLEX;
+
+        /* control */
+        ret = snd_ctl_add(sound_reg->card, snd_ctl_new1(&card_ctl, sound_reg));
+        if (ret < 0){
+        	dev_err(&pdev->dev, " snd_ctl register\n");
+                return ret;
+        }
+
+        ret = snd_card_register(sound_reg->card);
+	if (ret < 0) {
+		dev_err(&pdev->dev, " snd_card_register\n");
+		return ret;
+	}
+
+        /* pre-allocation of buffers */
+        /* NOTE: this may fail */
+        ret = snd_pcm_lib_preallocate_pages_for_all(pcm, SNDRV_DMA_TYPE_DEV, &pdev->dev, 64*1024, 64*1024);
+
+        //printk("addr %x\n", pcm->streams[0].substream->dma_buffer.addr);
+
+        //printk("addr %ul\n", pcm->streams[1].substream->dma_buffer.addr);
+	
 	//test memory
 //	ptr = kmalloc(sizeof(unsigned short)*512, GFP_KERNEL);
 //	if(ptr == NULL)
