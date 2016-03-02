@@ -38,9 +38,14 @@ static char *clk_name[] = {"pdb_clk", "dac0_clk", "dac1_clk", "dmamux2_clk", "dm
 	2539,1244,614,404,298,235,192,162,139,122,107,96,86,78,71,64,
 	59,54,50,46,42,39,36,33,31,28,26,24,22,20,18,16
 };*/
-static int voltab[] =
+/*static int voltab[] =
 {
   1600,526,311,219,167,135,112,95,83,73,65,58,52,47,43,39,
+  36,33,31,28,26,24,22,21,19,18,16,15,14,12,11,10
+};*/
+static int voltab[] =
+{
+  1600,1000,450,270,187,145,112,95,83,73,65,58,52,47,43,39,
   36,33,31,28,26,24,22,21,19,18,16,15,14,12,11,10
 };
 
@@ -63,6 +68,8 @@ struct sound_reg
 	int vol, vol_adjust;
 	int en_pin;
 	int diffSigOffsetWord;
+
+	int playing;
 };
 
 static const struct of_device_id sound_of_match[] =
@@ -444,7 +451,9 @@ static int snd_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
         	sound_reg->ack_periode_pos = 0;
 
         	//enable amp
-		gpio_set_value(sound_reg->en_pin, 1);
+		sound_reg->playing = 1;
+		if(sound_reg->vol > 0)
+			gpio_set_value(sound_reg->en_pin, 1);
 
                 /*Trigger PDB*/
         	return regmap_update_bits(sound_reg->regmap[REGMAP_PDB], PDB_SC, PDB_SC_SWTRIG_MASK, PDB_SC_SWTRIG_MASK);
@@ -463,7 +472,9 @@ static int snd_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 */
 
         	//disable amp
+		sound_reg->playing = 0;
 		gpio_set_value(sound_reg->en_pin, 0);
+
 
         	/*Disable  PDB*/
         	return regmap_update_bits(sound_reg->regmap[REGMAP_PDB], PDB_SC, PDB_SC_PDBEN_MASK, 0);
@@ -582,6 +593,12 @@ static int snd_ctl_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value 
         {
         	sound_reg->vol = ucontrol->value.integer.value[0];
         	sound_reg->vol_adjust = voltab[sound_reg->vol];
+
+		if(sound_reg->vol > 0 && sound_reg->playing != 0)
+			gpio_set_value(sound_reg->en_pin, 1);
+		else
+			gpio_set_value(sound_reg->en_pin, 0);
+
                 changed = 1;
         }
         return changed;
@@ -686,13 +703,15 @@ static int sound_driver_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
+	sound_reg->playing = 0;
+
 	/*
 	 *
 	 * ALSA
 	 *
 	 */
 
-	sound_reg->vol = 20; //todo magic number
+	sound_reg->vol = 18; //todo magic number
 	sound_reg->vol_adjust = voltab[sound_reg->vol];
 
 	///&pdev->dev correct?? something does not seem to work properly
