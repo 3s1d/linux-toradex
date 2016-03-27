@@ -1,1 +1,5 @@
-Linux kernel copy to intorduce the Toradex Colibri VF50 DAC based soundcard driver.
+Skytraxx V3.0 Kernel
+--------------------
+
+Including:
+- Toradex Colibri VF50 DAC based soundcard driver.
