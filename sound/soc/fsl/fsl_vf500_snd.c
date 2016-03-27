@@ -33,21 +33,16 @@
 
 static char *clk_name[] = {"pdb_clk", "dac0_clk", "dac1_clk", "dmamux2_clk", "dmamux3_clk"};
 
-/*static int voltab[] =
+static int voltab[] =
 {
 	2539,1244,614,404,298,235,192,162,139,122,107,96,86,78,71,64,
 	59,54,50,46,42,39,36,33,31,28,26,24,22,20,18,16
-};*/
+};
 /*static int voltab[] =
-{
-  1600,526,311,219,167,135,112,95,83,73,65,58,52,47,43,39,
-  36,33,31,28,26,24,22,21,19,18,16,15,14,12,11,10
-};*/
-static int voltab[] =
 {
   1600,1000,450,270,187,145,112,95,83,73,65,58,52,47,43,39,
   36,33,31,28,26,24,22,21,19,18,16,15,14,12,11,10
-};
+};*/
 
 
 #define REGMAP_PDB	0
@@ -111,7 +106,6 @@ static irqreturn_t snd_pcm_irq(int irq, void *dev_id)
 	struct sound_reg *sound_reg = dev_id;
 	unsigned int position, phys_addr;
 	irqreturn_t ret = IRQ_NONE;
-	//int test;
 
 	/*clear interrupt */
 	ret = regmap_update_bits(sound_reg->regmap[REGMAP_PDB], PDB_SC, PDB_SC_PDBIF_MASK, 0);
@@ -124,9 +118,6 @@ static irqreturn_t snd_pcm_irq(int irq, void *dev_id)
 
         /* get the current hardware pointer */
 	ret = regmap_read(sound_reg->regmap[REGMAP_DMA], DMA1_TCD0_SADDR, &phys_addr);
-	//ret += regmap_read(sound_reg->regmap[REGMAP_DMA], DMA1_TCD1_SADDR, &test);
-
-	//printk("%x-%x\n", phys_addr, test);
 
 	if(ret)
 	{
@@ -135,23 +126,12 @@ static irqreturn_t snd_pcm_irq(int irq, void *dev_id)
 	}
 	position = (phys_addr - sound_reg->substream->runtime->dma_addr) >> 1;   //adjusted to samples
 
-	//printk("I pos:%i\n", position);
-
-
 	if(position >= (sound_reg->ack_periode_pos+sound_reg->substream->runtime->period_size) || position < sound_reg->ack_periode_pos)
 	{
-//		printk("I note\n");
 		sound_reg->ack_periode_pos += sound_reg->substream->runtime->period_size;
 		sound_reg->ack_periode_pos %= (sound_reg->substream->runtime->buffer_size);
 		snd_pcm_period_elapsed(sound_reg->substream);
-//		printk("I acked: %i\n", sound_reg->ack_periode_pos);
 	}
-	else
-	{
-//		printk("I not quite there\n");
-	}
-
-//read proper address from dac dma???
 
 	ret = IRQ_HANDLED;
 	return ret;
@@ -161,10 +141,8 @@ static irqreturn_t snd_pcm_irq(int irq, void *dev_id)
 static int snd_playback_open(struct snd_pcm_substream *substream)
 {
 	struct sound_reg *sound_reg = snd_pcm_substream_chip(substream);
-//	struct platform_device *pdev = sound_reg->pdev;
         struct snd_pcm_runtime *runtime = substream->runtime;
         int ret, irq;
-        //printk("snd_playback_open\n");
 
         /*store substream pointer*/   //todo: temp
         sound_reg->substream = substream;
@@ -203,7 +181,6 @@ static int snd_playback_close(struct snd_pcm_substream *substream)
 
         /* the hardware-specific codes will be here */
         int irq = platform_get_irq(sound_reg->pdev, 0);
-        //printk("snd_playback_close\n");
 
         free_irq(irq, sound_reg);
 
@@ -214,7 +191,6 @@ static int snd_playback_close(struct snd_pcm_substream *substream)
 /* hw_free callback */
 static int snd_pcm_hw_free(struct snd_pcm_substream *substream)
 {
-	//printk("snd_pcm_hw_free\n");
         return snd_pcm_lib_free_pages(substream);
 }
 
@@ -224,7 +200,6 @@ static int snd_pcm_hw_params(struct snd_pcm_substream *substream, struct snd_pcm
 	int rv;
 	struct sound_reg *sound_reg = snd_pcm_substream_chip(substream);
 
-        //printk("snd_pcm_hw_params, size %i\n", params_buffer_bytes(hw_params));
         sound_reg->diffSigOffsetWord = params_buffer_bytes(hw_params)>>1;
 
 	rv = snd_pcm_lib_malloc_pages(substream, params_buffer_bytes(hw_params)<<1);
@@ -236,8 +211,6 @@ static int snd_pcm_hw_params(struct snd_pcm_substream *substream, struct snd_pcm
 	}
 
 	return 0;
-
-//        return snd_pcm_lib_malloc_pages(substream, params_buffer_bytes(hw_params));
 }
 
 /* prepare callback */
@@ -246,8 +219,6 @@ static int snd_pcm_prepare(struct snd_pcm_substream *substream)
 	struct sound_reg *sound_reg = snd_pcm_substream_chip(substream);
  	struct snd_pcm_runtime *runtime = substream->runtime;
  	int ret, smod, rateinv, idly = 65536, pdb_prescaler;
-
-        //printk("snd_pcm_prepare\n");
 
 	if(!(snd_mychip_playback_hw.formats & (1UL<<runtime->format)))
 	{
@@ -272,36 +243,29 @@ static int snd_pcm_prepare(struct snd_pcm_substream *substream)
 		return -1002;
 	}
 
-	//for some fancy reason, we can not do floating point operation here... workaround:
+	/* floating point workaround */
 	switch(runtime->rate)
 	{
 	case 8000:
 		pdb_prescaler = 6;
-		//rateinv = 129-1;
 		break;
 	case 11025:
 		pdb_prescaler = 5;
-		//rateinv = 187-1;
 		break;
 	case 16000:
 		pdb_prescaler = 5;
-		//rateinv = 129-1;
 		break;
 	case 22050:
 		pdb_prescaler = 6;
-		//rateinv = 47-1;
 		break;
 	case 32000:
 		pdb_prescaler = 6;
-		//rateinv = 32-1;
 		break;
 	case 44100:
 		pdb_prescaler = 5;
-		//rateinv = 47-1;
 		break;
 	case 48000:
 		pdb_prescaler = 5;
-		//rateinv = 43-1;		//11 for further computation
 		break;
 	default:
 		printk("unsupported rate: %i\n", runtime->rate);
@@ -314,28 +278,17 @@ static int snd_pcm_prepare(struct snd_pcm_substream *substream)
 	idly = runtime->period_size * (rateinv+1);
 	while(idly > USHRT_MAX)
 		idly>>=1;
-	idly--;				//-1 to address 0 counter value?make
-
-
-	//printk("rateinv %i\n", rateinv);
-
+	idly--;
 
         /* set up the hardware with the current configuration */
-
-        //printk("rate %i\n", runtime->rate);
-        //printk("channels %i\n", runtime->channels);
-        //printk("dma_addr %x dma_buffer.size %i\n", runtime->dma_addr, substream->dma_buffer.bytes);
-        //printk("periode size %i\n", (int)runtime->period_size);
 
 	/*
 	 * Configure DMA
 	 */
 	//DMAMUX2->CHCFG[0]
-//	ret =  regmap_write(sound_reg->regmap[REGMAP_DMAMUX2], 0, DMAMUX_CHCFG_ENBL_MASK | DMAMUX_CHCFG_SOURCE(32));
 	ret =  regmap_write(sound_reg->regmap[REGMAP_DMAMUX2], 0, DMAMUX_CHCFG_ENBL_MASK | DMAMUX_CHCFG_SOURCE(32) | (DMAMUX_CHCFG_ENBL_MASK | DMAMUX_CHCFG_SOURCE(33))<<8);
 
 	//DMA_ERQ
-//	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA_ERQ, DMA_ERQ_ERQ0_MASK);
 	ret += regmap_write(sound_reg->regmap[REGMAP_DMA], DMA_ERQ, DMA_ERQ_ERQ0_MASK | DMA_ERQ_ERQ1_MASK);
 
 	/*Set Source Address*/
@@ -379,9 +332,7 @@ static int snd_pcm_prepare(struct snd_pcm_substream *substream)
 		(DMA_BITER_ELINKNO_BITER(1)<<16) | 0);
 
 	if (ret)
-	{
 		return -EPERM;
-	}
 
 	/*
 	 * Configure PDB
@@ -438,11 +389,7 @@ static int snd_pcm_prepare(struct snd_pcm_substream *substream)
 /* trigger callback */
 static int snd_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 {
-//        int i;
-//        unsigned short *ptr16;
 	struct sound_reg *sound_reg = snd_pcm_substream_chip(substream);
-
-        //printk("snd_pcm_trigger: %i\n", cmd);
 
         switch (cmd) {
         case SNDRV_PCM_TRIGGER_START:
@@ -460,16 +407,6 @@ static int snd_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
                 break;
         case SNDRV_PCM_TRIGGER_STOP:
                 /* do something to stop the PCM engine */
-
-  /*      	ptr16 = (void *)substream->dma_buffer.area;
-        	for(i=0; i<512; i++)
-        	{
-        		printk("%04x ", ptr16[i]);
-        		if(i%8 == 7)
-        	        	printk("\n");
-
-        	}
-*/
 
         	//disable amp
 		sound_reg->playing = 0;
@@ -489,28 +426,8 @@ static int snd_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 static snd_pcm_uframes_t snd_pcm_pointer(struct snd_pcm_substream *substream)
 {
 	struct sound_reg *sound_reg = snd_pcm_substream_chip(substream);
-//        unsigned int current_ptr;
-//        int ret;
-//        unsigned int phys_addr;
-
-        /* get the current hardware pointer */
-//	ret = regmap_read(sound_reg->regmap[REGMAP_DMA], DMA1_TCD0_SADDR, &phys_addr);
-//	ret += regmap_read(sound_reg->regmap[REGMAP_DMA], DMA1_TCD1_SADDR, &phys_addr + (sound_reg->diffSigOffsetWord<<1));
-//	if(ret)
-//	{
-//		printk("unable to read DMA1_TCD0_SADDR: %i\n", ret);
-//		return -1;
-//	}
-
-//        current_ptr = phys_addr - sound_reg->substream->runtime->dma_addr;
-        //printk("snd_pcm_pointer %i\n", (int)bytes_to_frames(substream->runtime, current_ptr));
-
-
-//	return bytes_to_frames(substream->runtime, current_ptr);
-
 
 	return bytes_to_frames(substream->runtime, sound_reg->ack_periode_pos);
-
 }
 
 static int snd_pcm_copy(struct snd_pcm_substream *substream, int channel, snd_pcm_uframes_t pos,
@@ -523,11 +440,8 @@ static int snd_pcm_copy(struct snd_pcm_substream *substream, int channel, snd_pc
 	short *from = buf;
 	int i;
 
-	//printk("copy: %isamples@%i\n", (int)count, (int)pos);
-
 	for(i=0; i<frames_to_bytes(runtime, count)/sizeof(unsigned short); i++)
 	{
-		//to[i] = from[i]>>4;
 		int16_t in = from[i] / (sound_reg->vol_adjust);
 
 		//ensure limits
@@ -546,7 +460,6 @@ static int snd_pcm_copy(struct snd_pcm_substream *substream, int channel, snd_pc
 static int snd_pcm_silence(struct snd_pcm_substream *substream, int channel,
 		       snd_pcm_uframes_t pos, snd_pcm_uframes_t count)
 {
-	printk("silence hmmm???\n");
 	return 0;
 }
 
@@ -578,8 +491,9 @@ static int snd_ctl_info(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_info 
 static int snd_ctl_get(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value *ucontrol)
 {
         struct sound_reg *sound_reg = snd_kcontrol_chip(kcontrol);
+
         ucontrol->value.integer.value[0] = sound_reg->vol;
-        //printk("get vol %i\n", sound_reg->vol);
+
         return 0;
 }
 
@@ -588,7 +502,7 @@ static int snd_ctl_put(struct snd_kcontrol *kcontrol, struct snd_ctl_elem_value 
 {
 	struct sound_reg *sound_reg = snd_kcontrol_chip(kcontrol);
         int changed = 0;
-        //printk("set vol %li\n", ucontrol->value.integer.value[0]);
+
         if (sound_reg->vol != ucontrol->value.integer.value[0])
         {
         	sound_reg->vol = ucontrol->value.integer.value[0];
@@ -621,18 +535,10 @@ static int sound_driver_probe(struct platform_device *pdev)
 {
 	int i, ret;
 	struct sound_reg *sound_reg;
-	//const struct of_device_id *match;
 	struct resource *mem_res;
 	void __iomem *base;
 
 	struct snd_pcm *pcm;
-
-	//unsigned short *ptr;
-
-	//printk("Sound probe\n");
-
-	//required???
-	//match = of_match_node(sound_of_match, pdev->dev.of_node);
 
 	sound_reg = devm_kzalloc(&pdev->dev, sizeof(struct sound_reg), GFP_KERNEL);
 	if (IS_ERR(sound_reg))
@@ -714,7 +620,6 @@ static int sound_driver_probe(struct platform_device *pdev)
 	sound_reg->vol = 18; //todo magic number
 	sound_reg->vol_adjust = voltab[sound_reg->vol];
 
-	///&pdev->dev correct?? something does not seem to work properly
 	ret = snd_card_new(&pdev->dev, SNDRV_DEFAULT_IDX1, SNDRV_DEFAULT_STR1, THIS_MODULE, 0, &sound_reg->card);
 	if (ret < 0)
 	{
@@ -757,20 +662,6 @@ static int sound_driver_probe(struct platform_device *pdev)
         /* pre-allocation of buffers */
         /* NOTE: this may fail */
         ret = snd_pcm_lib_preallocate_pages_for_all(pcm, SNDRV_DMA_TYPE_DEV, &pdev->dev, 64*1024, 64*1024);
-
-        //printk("addr %x\n", pcm->streams[0].substream->dma_buffer.addr);
-
-        //printk("addr %ul\n", pcm->streams[1].substream->dma_buffer.addr);
-	
-	//test memory
-//	ptr = kmalloc(sizeof(unsigned short)*512, GFP_KERNEL);
-//	if(ptr == NULL)
-//		return -ENOMEM;
-//	memcpy(ptr, u16aDAC_Val, sizeof(unsigned short) * 512);
-	//phys_addr = virt_to_phys(ptr);
-
-	//memcpy(pcm->streams[0].substream->dma_buffer.area, u16aDAC_Val, sizeof(unsigned short) * 512);
-
 
 	printk("vf500 sound probed\n");
 
