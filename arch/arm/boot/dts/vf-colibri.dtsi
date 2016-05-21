@@ -427,7 +427,7 @@
 
 		pinctrl_usbh1_reg: gpio_usb_vbus {
 			fsl,pins = <
-				VF610_PAD_PTD4__GPIO_83			0x22ed
+				VF610_PAD_PTD4__GPIO_83			0x2ce
 			>;
 		};
 	};
