@@ -12,10 +12,10 @@
 #include "vf-colibri-eval-v3.dtsi"
 
 / {
-	model = "Toradex Colibri VF50 on Colibri Evaluation Board";
+	model = "Toradex Colibri VF50 on Skytraxx Board";
 	compatible = "toradex,vf500-colibri_vf50-on-eval", "toradex,vf500-colibri_vf50", "fsl,vf500";
 };
 
 &touchctrl {
-	status = "okay";
+	status = "disabled";
 };

@@ -48,12 +48,12 @@
 			regulator-name = "usbh_vbus";
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
-			gpio = <&gpio2 19 GPIO_ACTIVE_LOW>;
+			//gpio = <&gpio2 19 GPIO_ACTIVE_LOW>;
 			vin-supply = <&sys_5v0_reg>;
 		};
 	};
 
-	gpio-keys {
+/*	gpio-keys {
 		compatible = "gpio-keys";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_gpiokeys>;
@@ -66,11 +66,18 @@
 			gpio-key,wakeup;
 		};
 	};
+*/
+	gpio-poweroff {
+	    	compatible = "gpio-poweroff";
+	    	pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpiopower>;
+	    	gpios = <&gpio2 25 GPIO_ACTIVE_LOW>;
+	};
 };
 
 &bl {
-	brightness-levels = <0 4 8 16 32 64 128 255>;
-	default-brightness-level = <6>;
+	brightness-levels = <0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 18 20 23 25 28 31 33 36 40 43 46 50 54 57 61 66 70 74 79 84 89 94 99 105 110 116 122 128 134 140 147 153 160 167 174 182 189 197 205 213 221 229 238 246 255>;
+	default-brightness-level = <40>;
 	status  = "okay";
 };
 
@@ -79,12 +86,28 @@
 	pinctrl-0 = <&pinctrl_dcu0_1>;
 	display = <&display>;
 	status = "okay";
+	//status = "disabled";
 
 	display: display@0 {
 		bits-per-pixel = <16>;
 
-		display-timings {
-			native-mode = <&timing_vga>;
+                display-timings {
+                        native-mode = <&timing_skytraxx>;
+                        /* Skytraxx timing */
+                        timing_skytraxx: 480x272 {
+                                clock-frequency = <7507500>;	//50fps//9000000
+                                hactive = <480>;
+                                vactive = <272>;
+                                hback-porch = <2>;
+                                hfront-porch = <2>;
+                                vback-porch = <2>;
+                                vfront-porch = <2>;
+                                hsync-len = <41>;               //??
+                                vsync-len = <10>;               //??
+                                hsync-active = <0>;
+                                vsync-active = <0>;
+                                pixelclk-active = <1>;
+                        };
 			/* Standard VGA timing */
 			timing_vga: 640x480 {
 				clock-frequency = <25175000>;
@@ -182,6 +205,11 @@
 &dspi1 {
 	status = "okay";
 
+	spidev1: dspi@0 {
+		compatible = "spidev";
+		reg = <0>;
+		spi-max-frequency = <20000000>;
+	};
 	mcp2515can: can@0 {
 		compatible = "microchip,mcp2515";
 		pinctrl-names = "default";
@@ -191,6 +219,7 @@
 		spi-max-frequency = <10000000>;
 		interrupt-parent = <&gpio1>;
 		interrupts = <11 GPIO_ACTIVE_LOW>;
+		status = "disabled";
 	};
 };
 
@@ -229,7 +258,12 @@
 	rtc: m41t0m6@68 {
 		compatible = "st,m41t00";
 		reg = <0x68>;
+		status = "disabled";
 	};
+};
+
+&i2c1 {
+	status = "okay";
 };
 
 &pwm0 {
@@ -237,6 +271,10 @@
 };
 
 &pwm1 {
+	status = "okay";
+};
+
+&sound {
 	status = "okay";
 };
 
@@ -272,9 +310,15 @@
 			>;
 		};
 
-		pinctrl_gpiokeys: gpiokeys {
+//		pinctrl_gpiokeys: gpiokeys {
+//			fsl,pins = <
+//				VF610_PAD_PTB19__GPIO_41	0x219d
+//			>;
+//		};
+
+		pinctrl_gpiopower: gpiopower {
 			fsl,pins = <
-				VF610_PAD_PTB19__GPIO_41	0x218d
+				VF610_PAD_PTD10__GPIO_89	0x10c2
 			>;
 		};
 
