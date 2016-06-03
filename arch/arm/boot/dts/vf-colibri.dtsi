@@ -145,19 +145,19 @@
 &uart0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart0>;
-	dma-names = "", "";						//bugfix up to 4.1
+	//dma-names = "", "";						//bugfix up to 4.1
 };
 
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1>;
-	dma-names = "", "";						//bugfix up to 4.1
+	//dma-names = "", "";						//bugfix up to 4.1
 };
 
 &uart2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart2>;
-	dma-names = "", "";						//bugfix up to 4.1
+	//dma-names = "", "";						//bugfix up to 4.1
 };
 
 &usbdev0 {
