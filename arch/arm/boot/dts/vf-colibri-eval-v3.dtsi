@@ -95,7 +95,7 @@
                         native-mode = <&timing_skytraxx>;
                         /* Skytraxx timing */
                         timing_skytraxx: 480x272 {
-                                clock-frequency = <7507500>;	//50fps//9000000
+                                clock-frequency = <9000000>;
                                 hactive = <480>;
                                 vactive = <272>;
                                 hback-porch = <2>;
