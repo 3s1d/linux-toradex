@@ -331,7 +331,7 @@ static void lpuart_dma_tx(struct lpuart_port *sport)
 
 	sport->dma_tx_bytes = uart_circ_chars_pending(xmit);
 
-	if (xmit->tail < xmit->head) {
+	if (xmit->tail < xmit->head || xmit->head == 0) {
 		sport->dma_tx_nents = 1;
 		sg_init_one(sgl, xmit->buf + xmit->tail, sport->dma_tx_bytes);
 	} else {
@@ -810,6 +810,7 @@ static int lpuart_config_rs485(struct uart_port *port,
 {
 	struct lpuart_port *sport = container_of(port,
 			struct lpuart_port, port);
+
 	u8 modem = readb(sport->port.membase + UARTMODEM) &
 		~(UARTMODEM_TXRTSPOL | UARTMODEM_TXRTSE);
 	writeb(modem, sport->port.membase + UARTMODEM);
@@ -819,9 +820,9 @@ static int lpuart_config_rs485(struct uart_port *port,
 		modem |= UARTMODEM_TXRTSE;
 
 		/*
-		* RTS needs to be logic HIGH either during transer _or_ after
-		* transfer, other variants are not supported by the hardware.
-		*/
+		 * RTS needs to be logic HIGH either during transer _or_ after
+		 * transfer, other variants are not supported by the hardware.
+		 */
 
 		if (!(rs485->flags & (SER_RS485_RTS_ON_SEND |
 				SER_RS485_RTS_AFTER_SEND)))
@@ -833,11 +834,11 @@ static int lpuart_config_rs485(struct uart_port *port,
 			rs485->flags &= ~SER_RS485_RTS_AFTER_SEND;
 
 		/*
-		* The hardware defaults to RTS logic HIGH while transfer.
-		* Switch polarity in case RTS shall be logic HIGH
-		* after transfer.
-		* Note: UART is assumed to be active high.
-		*/
+		 * The hardware defaults to RTS logic HIGH while transfer.
+		 * Switch polarity in case RTS shall be logic HIGH
+		 * after transfer.
+		 * Note: UART is assumed to be active high.
+		 */
 		if (rs485->flags & SER_RS485_RTS_ON_SEND)
 			modem &= ~UARTMODEM_TXRTSPOL;
 		else if (rs485->flags & SER_RS485_RTS_AFTER_SEND)
@@ -883,9 +884,9 @@ static unsigned int lpuart32_get_mctrl(struct uart_port *port)
 
 static void lpuart_set_mctrl(struct uart_port *port, unsigned int mctrl)
 {
+	unsigned char temp;
 	struct lpuart_port *sport = container_of(port,
 				struct lpuart_port, port);
-	unsigned char temp;
 
 	/* Make sure RXRTSE bit is not set when RS485 is enabled */
 	if (!(sport->port.rs485.flags & SER_RS485_ENABLED)) {
@@ -898,7 +899,7 @@ static void lpuart_set_mctrl(struct uart_port *port, unsigned int mctrl)
 		if (mctrl & TIOCM_CTS)
 			temp |= UARTMODEM_TXCTSE;
 
-		writeb(temp, sport->port.membase + UARTMODEM);
+		writeb(temp, port->membase + UARTMODEM);
 	}
 }
 
@@ -1301,7 +1302,8 @@ lpuart_set_termios(struct uart_port *port, struct ktermios *termios,
 		cr1 |= UARTCR1_M;
 	}
 
-	/* When auto RS-485 RTS mode is enabled,
+	/*
+	 * When auto RS-485 RTS mode is enabled,
 	 * hardware flow control need to be disabled.
 	 */
 	if (sport->port.rs485.flags & SER_RS485_ENABLED)
@@ -1485,6 +1487,8 @@ lpuart32_set_termios(struct uart_port *port, struct ktermios *termios,
 			else
 				ctrl &= ~UARTCTRL_PT;
 		}
+	} else {
+		ctrl &= ~UARTCTRL_PE;
 	}
 
 	/* ask the core to calculate the divisor */
@@ -1828,6 +1832,45 @@ static struct console lpuart32_console = {
 	.index		= -1,
 	.data		= &lpuart_reg,
 };
+
+static void lpuart_early_write(struct console *con, const char *s, unsigned n)
+{
+	struct earlycon_device *dev = con->data;
+
+	uart_console_write(&dev->port, s, n, lpuart_console_putchar);
+}
+
+static void lpuart32_early_write(struct console *con, const char *s, unsigned n)
+{
+	struct earlycon_device *dev = con->data;
+
+	uart_console_write(&dev->port, s, n, lpuart32_console_putchar);
+}
+
+static int __init lpuart_early_console_setup(struct earlycon_device *device,
+					  const char *opt)
+{
+	if (!device->port.membase)
+		return -ENODEV;
+
+	device->con->write = lpuart_early_write;
+	return 0;
+}
+
+static int __init lpuart32_early_console_setup(struct earlycon_device *device,
+					  const char *opt)
+{
+	if (!device->port.membase)
+		return -ENODEV;
+
+	device->con->write = lpuart32_early_write;
+	return 0;
+}
+
+OF_EARLYCON_DECLARE(lpuart, "fsl,vf610-lpuart", lpuart_early_console_setup);
+OF_EARLYCON_DECLARE(lpuart32, "fsl,ls1021a-lpuart", lpuart32_early_console_setup);
+EARLYCON_DECLARE(lpuart, lpuart_early_console_setup);
+EARLYCON_DECLARE(lpuart32, lpuart32_early_console_setup);
 
 #define LPUART_CONSOLE	(&lpuart_console)
 #define LPUART32_CONSOLE	(&lpuart32_console)
