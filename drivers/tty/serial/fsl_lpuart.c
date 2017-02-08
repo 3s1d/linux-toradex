@@ -228,7 +228,7 @@
 #define DEV_NAME	"ttyLP"
 #define UART_NR		6
 
-#define DMA_RX_TIMEOUT (10)
+#define DMA_RX_TIMEOUT (25)
 
 static bool nodma = false;
 module_param(nodma, bool, S_IRUGO);
