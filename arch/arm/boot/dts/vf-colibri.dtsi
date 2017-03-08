@@ -247,15 +247,16 @@
 
 		pinctrl_flexcan0: can0grp {
 			fsl,pins = <
-				VF610_PAD_PTB14__CAN0_RX	0x31F1
-				VF610_PAD_PTB15__CAN0_TX	0x31F2
+				//org 0x31f1, 0x31f2
+				VF610_PAD_PTB14__CAN0_RX	0x0071
+				VF610_PAD_PTB15__CAN0_TX	0x0072
 			>;
 		};
 
 		pinctrl_flexcan1: can1grp {
 			fsl,pins = <
-				VF610_PAD_PTB16__CAN1_RX	0x31F1
-				VF610_PAD_PTB17__CAN1_TX	0x31F2
+				VF610_PAD_PTB16__CAN1_RX	0x0071
+				VF610_PAD_PTB17__CAN1_TX	0x0072
 			>;
 		};
 
@@ -295,22 +296,24 @@
 
 		pinctrl_dspi1: dspi1grp {
 			fsl,pins = <
-				VF610_PAD_PTD5__DSPI1_CS0		0x33e2
-				VF610_PAD_PTD6__DSPI1_SIN		0x33e1
-				VF610_PAD_PTD7__DSPI1_SOUT		0x33e2
-				VF610_PAD_PTD8__DSPI1_SCK		0x33e2
+				//org: 0x33e2, 0x33e1
+				VF610_PAD_PTD5__DSPI1_CS0		0x0262
+				VF610_PAD_PTD6__DSPI1_SIN		0x0261
+				VF610_PAD_PTD7__DSPI1_SOUT		0x0262
+				VF610_PAD_PTD8__DSPI1_SCK		0x0262
 			>;
 		};
 
 		pinctrl_esdhc1: esdhc1grp {
 			fsl,pins = <
-				VF610_PAD_PTA24__ESDHC1_CLK	0x31ef
-				VF610_PAD_PTA25__ESDHC1_CMD	0x31ef
-				VF610_PAD_PTA26__ESDHC1_DAT0	0x31ef
-				VF610_PAD_PTA27__ESDHC1_DAT1	0x31ef
-				VF610_PAD_PTA28__ESDHC1_DATA2	0x31ef
-				VF610_PAD_PTA29__ESDHC1_DAT3	0x31ef
-				VF610_PAD_PTB20__GPIO_42	0x219d
+				//org 0x31ef (last 0x219d)
+				VF610_PAD_PTA24__ESDHC1_CLK	0x106f
+				VF610_PAD_PTA25__ESDHC1_CMD	0x106f
+				VF610_PAD_PTA26__ESDHC1_DAT0	0x106f
+				VF610_PAD_PTA27__ESDHC1_DAT1	0x106f
+				VF610_PAD_PTA28__ESDHC1_DATA2	0x106f
+				VF610_PAD_PTA29__ESDHC1_DAT3	0x106f
+				VF610_PAD_PTB20__GPIO_42	0x105d
 			>;
 		};
 
@@ -375,50 +378,57 @@
 
 		pinctrl_pwm0_a: pwm0agrp {
 			fsl,pins = <
-				VF610_PAD_PTB0__FTM0_CH0		0x1182
+				//org 0x1182
+				VF610_PAD_PTB0__FTM0_CH0		0x0042
 			>;
 		};
 
 		pinctrl_pwm0_c: pwm0cgrp {
 			fsl,pins = <
-				VF610_PAD_PTB1__FTM0_CH1		0x1182
+				//org 0x1182
+				VF610_PAD_PTB1__FTM0_CH1		0x0042
 			>;
 		};
 
 		pinctrl_pwm1_b: pwm1bgrp {
 			fsl,pins = <
-				VF610_PAD_PTB8__FTM1_CH0		0x1182
+				//org 0x1182
+				VF610_PAD_PTB8__FTM1_CH0		0x0042
 			>;
 		};
 
 		pinctrl_pwm1_d: pwm1dgrp {
 			fsl,pins = <
-				VF610_PAD_PTB9__FTM1_CH1		0x1182
+				//org 0x1182
+				VF610_PAD_PTB9__FTM1_CH1		0x0042
 			>;
 		};
 
 		pinctrl_uart0: uart0grp {
 			fsl,pins = <
-				VF610_PAD_PTB10__UART0_TX		0x21a2
-				VF610_PAD_PTB11__UART0_RX		0x21a1
-				VF610_PAD_PTB12__UART0_RTS		0x21a2
-				VF610_PAD_PTB13__UART0_CTS		0x21a1
+				//org 0x21a1, 0x21a2
+				VF610_PAD_PTB10__UART0_TX		0x0062
+				VF610_PAD_PTB11__UART0_RX		0x0061
+				VF610_PAD_PTB12__UART0_RTS		0x0062
+				VF610_PAD_PTB13__UART0_CTS		0x0061
 			>;
 		};
 
 		pinctrl_uart1: uart1grp {
 			fsl,pins = <
-				VF610_PAD_PTB4__UART1_TX		0x21a2
-				VF610_PAD_PTB5__UART1_RX		0x21a1
+				//org 0x21a1, 0x21a2
+				VF610_PAD_PTB4__UART1_TX		0x0062
+				VF610_PAD_PTB5__UART1_RX		0x0061
 			>;
 		};
 
 		pinctrl_uart2: uart2grp {
 			fsl,pins = <
-				VF610_PAD_PTD0__UART2_TX		0x21a2
-				VF610_PAD_PTD1__UART2_RX		0x21a1
-				VF610_PAD_PTD2__UART2_RTS		0x21a2
-				VF610_PAD_PTD3__UART2_CTS		0x21a1
+				//org 0x21a1, 0x21a2
+				VF610_PAD_PTD0__UART2_TX		0x0062
+				VF610_PAD_PTD1__UART2_RX		0x0061
+				VF610_PAD_PTD2__UART2_RTS		0x0062
+				VF610_PAD_PTD3__UART2_CTS		0x0061
 			>;
 		};
 
