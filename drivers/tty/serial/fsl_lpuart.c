@@ -627,10 +627,13 @@ out:
 static irqreturn_t lpuart_rxint(int irq, void *dev_id)
 {
 	struct lpuart_port *sport = dev_id;
-	unsigned int flg, ignored = 0;
+	unsigned int flg, ignored = 0, overrun = 0;
 	struct tty_port *port = &sport->port.state->port;
 	unsigned long flags;
 	unsigned char rx, sr;
+
+	if (sport->port.irq_wake)
+		pm_wakeup_event(port->tty->dev, 0);
 
 	spin_lock_irqsave(&sport->port.lock, flags);
 
@@ -654,7 +657,7 @@ static irqreturn_t lpuart_rxint(int irq, void *dev_id)
 				sport->port.icount.frame++;
 
 			if (sr & UARTSR1_OR)
-				sport->port.icount.overrun++;
+				overrun++;
 
 			if (sr & sport->port.ignore_status_mask) {
 				if (++ignored > 100)
@@ -681,6 +684,17 @@ static irqreturn_t lpuart_rxint(int irq, void *dev_id)
 	}
 
 out:
+	if (overrun) {
+		sport->port.icount.overrun += overrun;
+
+		/*
+		 * Overruns cause FIFO pointers to become missaligned.
+		 * Flushing the receive FIFO reinitializes the pointers.
+		 */
+		writeb(UARTCFIFO_RXFLUSH, sport->port.membase + UARTCFIFO);
+		writeb(UARTSFIFO_RXOF, sport->port.membase + UARTSFIFO);
+	}
+
 	spin_unlock_irqrestore(&sport->port.lock, flags);
 
 	tty_flip_buffer_push(port);
@@ -800,6 +814,13 @@ static void lpuart_copy_rx_to_tty(struct lpuart_port *sport)
 	sr = readb(sport->port.membase + UARTSR1);
 
 	if (sr & (UARTSR1_PE | UARTSR1_FE)) {
+		unsigned char cr2;
+
+		/* Disable receiver during this operation... */
+		cr2 = readb(sport->port.membase + UARTCR2);
+		cr2 &= ~(UARTCR2_RE);
+		writeb(cr2, sport->port.membase + UARTCR2);
+
 		/* Read DR to clear the error flags */
 		readb(sport->port.membase + UARTDR);
 
@@ -807,6 +828,21 @@ static void lpuart_copy_rx_to_tty(struct lpuart_port *sport)
 		    sport->port.icount.parity++;
 		else if (sr & UARTSR1_FE)
 		    sport->port.icount.frame++;
+
+		/*
+		 * At this point parity/framing error is cleared
+		 * However, since the DMA already read the data register
+		 * and we had to read it again after reading the status
+		 * register to properly clear the flags, the FIFO actually
+		 * underflowed... This requires a clearing of the FIFO...
+		 */
+		if (readb(sport->port.membase + UARTSFIFO) & UARTSFIFO_RXUF) {
+			writeb(UARTSFIFO_RXUF, sport->port.membase + UARTSFIFO);
+			writeb(UARTCFIFO_RXFLUSH, sport->port.membase + UARTCFIFO);
+		}
+
+		cr2 |= UARTCR2_RE;
+		writeb(cr2, sport->port.membase + UARTCR2);
 	}
 
 	async_tx_ack(sport->dma_rx_desc);
@@ -2223,4 +2259,3 @@ module_exit(lpuart_serial_exit);
 
 MODULE_DESCRIPTION("Freescale lpuart serial port driver");
 MODULE_LICENSE("GPL v2");
-
